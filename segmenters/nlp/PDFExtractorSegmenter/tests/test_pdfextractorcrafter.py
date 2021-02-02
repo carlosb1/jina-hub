@@ -1,6 +1,7 @@
 from .. import PDFExtractorSegmenter
 from PIL import Image
 import os
+from pathlib import Path
 
 expected_text = "A cat poem\nI love cats, I love every kind of cat,\nI just wanna hug all of them, but I can't," \
                 "\nI'm thinking about cats again\nI think about how cute they are\nAnd their whiskers and their " \
@@ -16,10 +17,10 @@ def test_io_uri_images_and_text():
     crafter = PDFExtractorSegmenter()
     chunks = crafter.segment(uri=path_img_text, buffer=None)
 
-    assert len(chunks) == 3
+    assert len(chunks) == 4
 
     # Check images
-    for idx, c in enumerate(chunks[:-1]):
+    for idx, c in enumerate(chunks[:-2]):
         img = Image.open(os.path.join(cur_dir, f'test_img_{idx}.jpg'))
         blob = chunks[idx]['blob']
         assert chunks[idx]['mime_type'] == 'image/png'
@@ -38,7 +39,7 @@ def test_io_uri_text():
     crafter = PDFExtractorSegmenter()
     chunks = crafter.segment(uri=path_text, buffer=None)
 
-    assert len(chunks) == 1
+    assert len(chunks) == 2
 
     # Check test
     assert chunks[0]['text'] == expected_text
@@ -49,10 +50,10 @@ def test_io_uri_img():
     crafter = PDFExtractorSegmenter()
     chunks = crafter.segment(uri=path_img, buffer=None)
 
-    assert len(chunks) == 2
+    assert len(chunks) == 3
 
     # Check images
-    for idx, c in enumerate(chunks):
+    for idx, c in enumerate(chunks[:-1]):
         img = Image.open(os.path.join(cur_dir, f'test_img_{idx}.jpg'))
         blob = chunks[idx]['blob']
         assert chunks[idx]['mime_type'] == 'image/png'
