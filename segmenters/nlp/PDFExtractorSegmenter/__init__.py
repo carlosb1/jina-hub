@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
@@ -17,7 +18,6 @@ class PDFExtractorSegmenter(BaseSegmenter):
     def segment(self, uri: str, buffer: bytes, *args, **kwargs) -> List[Dict]:
         import fitz
         import PyPDF2
-
         if uri:
             pdf_img = fitz.open(uri)
             pdf_text = open(uri, 'rb')
@@ -27,14 +27,17 @@ class PDFExtractorSegmenter(BaseSegmenter):
         else:
             raise ValueError('No value found in "buffer" or "uri"')
 
+        contains_info = False
         chunks = []
         # Extract images
         with pdf_img:
+            contains_info = True
             for page in range(len(pdf_img)):
                 for img in pdf_img.getPageImageList(page):
                     xref = img[0]
                     pix = fitz.Pixmap(pdf_img, xref)
-                    np_arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n).astype('float32')
+                    np_arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
+                        pix.h, pix.w, pix.n).astype('float32')
                     if pix.n - pix.alpha < 4:  # if gray or RGB
                         chunks.append(
                             dict(blob=np_arr, weight=1.0, mime_type='image/png'))
@@ -47,6 +50,7 @@ class PDFExtractorSegmenter(BaseSegmenter):
 
         # Extract text
         with pdf_text:
+            contains_info = True
             text = ""
             pdf_reader = PyPDF2.PdfFileReader(pdf_text)
             count = pdf_reader.numPages
@@ -56,5 +60,11 @@ class PDFExtractorSegmenter(BaseSegmenter):
             if text:
                 chunks.append(
                     dict(text=text, weight=1.0, mime_type='text/plain'))
+
+        # Add filename
+        if contains_info and uri is not None:
+            chunks.append(
+                dict(text=Path(uri).name, weight=1.0, mime_type='text/plain')
+            )
 
         return chunks
